@@ -97,10 +97,11 @@ if st.button("Run Query", type="primary"):
             st.error(f"An error occurred: {e}")
 
 # Add a debug section to check session state
-if st.toggle("Show Session State (Debug)"):
+if st.toggle("Load Data"):
     st.write("Current session state keys:", list(st.session_state.keys()))
     if 'data' in st.session_state:
         st.write("DataFrame shape:", st.session_state['data'].shape)
         st.write("DataFrame columns:", st.session_state['data'].columns.tolist())
     st.write("Current DB Config:", st.session_state.get('db_config', 'Not set'))
+
     st.write("Saved Query:", st.session_state.get('saved_query', 'No query saved'))
