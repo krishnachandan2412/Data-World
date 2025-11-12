@@ -93,7 +93,8 @@ hide_streamlit_style = """
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-# Define all pages with proper emoji iconsUnderstanding_data = st.Page(
+# Define all pages with proper emoji icons
+Understanding_data = st.Page(
     "Data_source/Understanding_data.py",
     title="Understanding data",
     icon="📊",
@@ -165,3 +166,4 @@ else:
     # Show login page for non-logged-in users
 
     login_flow()
+
