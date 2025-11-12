@@ -51,4 +51,34 @@ A Data Analytics Streamlit Web App for interactive data exploration and visualiz
 
 ---
 
-Feel free to add or modify features in `README.md` as your app grows!
+Feel free to add or modify features in `README.md` as 
+
+## Screenshots
+
+### 1. Home Page / Upload Dataset
+![Home Page]()
+*Upload your CSV file to begin data analysis*
+
+### 2. Data Preview
+![Data Preview]()
+*View your uploaded data in an interactive table*
+
+### 3. Summary Statistics
+![Summary Statistics]()
+*Get comprehensive statistical analysis of your dataset*
+
+### 4. Data Visualizations
+![Data Visualizations]()
+*Create interactive charts: line, bar, scatter, pie, and more*
+
+### 5. Data Cleaning
+![Data Cleaning]()
+*Handle missing values and clean your data*
+
+### 6. Export Results
+![Export Results]()
+*Download your processed data for further use*
+
+---
+
+**To add your screenshots:** Drag and drop your image files into the editor above, and GitHub will automatically insert the image URLs in the `()` parentheses.your app grows!
