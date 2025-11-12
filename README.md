@@ -40,7 +40,7 @@ A Data Analytics Streamlit Web App for interactive data exploration and visualiz
     ```
 
 5. **Access your app:**
-   - Open the displayed local URL in your browser ([usually http://localhost:8501](https://data-world.streamlit.app))
+   - Open the displayed local URL in your browser (https://data-world.streamlit.app)
 
 ## Security Note
 
