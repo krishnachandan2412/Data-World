@@ -9,14 +9,16 @@ st.subheader("Here you can connect to MySQL Server and set it as session data",d
 
 # Initialize session state for form inputs if they don't exist
 if 'db_config' not in st.session_state:
+    
     st.session_state.db_config = {
-        'host': 'localhost',
+        'host': '',
         'database': 'your_database',
         'username': '',
         'password': ''
     }
 
 # Database connection inputs with session state
+st.caption("It works only on remote servers")
 col1, col2 = st.columns(2)
 with col1:
     host = st.text_input("MySQL Host",
@@ -105,3 +107,4 @@ if st.toggle("Load Data"):
     st.write("Current DB Config:", st.session_state.get('db_config', 'Not set'))
 
     st.write("Saved Query:", st.session_state.get('saved_query', 'No query saved'))
+
