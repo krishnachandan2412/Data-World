@@ -65,6 +65,7 @@ if dfs:
         with file_tabs[i]:
             st.dataframe(df)
             # Button to set this df as session data
-            if st.button(f"Set {filenames[i]} as session data", key=f"set_session_{i}"):
+            if st.button(f"load {filenames[i]} ", key=f"set_session_{i}"):
                 st.session_state['data'] = df
+
                 st.success(f"{filenames[i]} set as session data!")
