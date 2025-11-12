@@ -93,51 +93,51 @@ hide_streamlit_style = """
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-# Define all pages with proper emoji icons
-Understanding_data = st.Page(
-    "Data_source\\Understanding_data.py",
+# Define all pages with proper emoji iconsUnderstanding_data = st.Page(
+    "Data_source/Understanding_data.py",
     title="Understanding data",
     icon="📊",
     default=True
 )
 
+
 Data_source_local = st.Page(
-    "Data_source\\Data_source_local.py",
+    "Data_source/Data_source_local.py",
     title="Data from computer",
     icon="💾"
 )
 
 Data_source_server = st.Page(
-    "Data_source\\Data_source_server.py",
+    "Data_source/Data_source_server.py",
     title="Data from Server",
     icon="☁️"
 )
 
 Data_summary = st.Page(
-    "Data_preprocessing\\Data_observation.py",
+    "Data_preprocessing/Data_observation.py",
     title="Data Inspection",
     icon="🧾"
 )
 
 Data_cleaning = st.Page(
-    "Data_preprocessing\\Cleaning_data.py",
+    "Data_preprocessing/Cleaning_data.py",
     title="Data Cleaning",
     icon="🧹"
 )
 
 Feature_engineering = st.Page(
-    "Data_preprocessing\\Feature_engineering.py",
+    "Data_preprocessing/Feature_engineering.py",
     title="Feature Engineering",
     icon="⚙️"
 )
 
 Data_visualization = st.Page(
-    "Data_preprocessing\\Charts_dashboard.py",
+    "Data_preprocessing/Charts_dashboard.py",
     title="Data Visualization",
     icon="📈"
 )
 ML_Supervised = st.Page(
-    "ML_Ground\\Supervised_ml.py",
+    "ML_Ground/Supervised_ml.py",
     title="Machine Learning",
     icon="🤖"
 )
@@ -163,4 +163,5 @@ if st.session_state.logged_in:
     pg.run()
 else:
     # Show login page for non-logged-in users
+
     login_flow()
