@@ -42,8 +42,9 @@ if "logged_email" not in st.session_state: # check if logged_email is in session
 
 
 def login_flow():
-    st.title("🔏:rainbow[ Login to Continue]")
-    st.subheader("Explore Data world ",divider=True)
+    st.title(":rainbow[Explore Data world] ")
+    st.subheader("🔏 Login to Continue",divider=True)
+    st.text("Keep exploring! Amazing features are waiting for you in the app!")
     st.caption("Use only your registered Google account Or Microsoft account")
     st.text_input("Enter your email", key="login_email")
     if st.button("Send OTP"):
@@ -166,4 +167,5 @@ else:
     # Show login page for non-logged-in users
 
     login_flow()
+
 
