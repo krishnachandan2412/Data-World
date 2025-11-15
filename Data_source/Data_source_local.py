@@ -63,9 +63,11 @@ if dfs:
     file_tabs = st.tabs(filenames)
     for i, df in enumerate(dfs):
         with file_tabs[i]:
+            st.markdown(f"In this tab you can see the data from {filenames[i]}  . There are :red[{df.shape[0]}] rows and :blue[{df.shape[1]}] columns.")
             st.dataframe(df)
             # Button to set this df as session data
             if st.button(f"load {filenames[i]} ", key=f"set_session_{i}"):
                 st.session_state['data'] = df
 
                 st.success(f"{filenames[i]} set as session data!")
+
