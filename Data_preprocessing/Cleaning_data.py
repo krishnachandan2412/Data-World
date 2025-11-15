@@ -6,17 +6,24 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler, Ro
 from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer, KNNImputer
 
+# --- Safe session state/data load ---
+if 'data' not in st.session_state:
+    st.session_state['data'] = None
+
 # Page configuration
 st.set_page_config(page_title="Data Cleaning Tool", page_icon="✨", layout="centered", initial_sidebar_state="expanded")
 
 st.header("🧹:blue[Data Cleaning Tool]", divider=True)
 st.subheader("Here you can clean your data", divider=True)
 
+# File uploader
 if st.session_state['data'] is None:
-    st.warning("No data found. Please load data first.")
-    # Optionally add a file uploader here!
-    st.stop()
-
+    uploaded_file = st.file_uploader("Upload your CSV file to begin:", type=['csv'])
+    if uploaded_file is not None:
+        st.session_state['data'] = pd.read_csv(uploaded_file)
+    else:
+        st.info("Please upload a file to continue.")
+        st.stop()
 
 df = st.session_state['data']
 st.success("Session DataFrame loaded!")
@@ -25,7 +32,6 @@ st.dataframe(df.head())
 if 'original_df' not in st.session_state:
     st.session_state['original_df'] = df.copy()
 
-# Helper function for outlier detection
 def detect_outliers(series):
     Q1 = series.quantile(0.25)
     Q3 = series.quantile(0.75)
@@ -42,7 +48,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     '🔍 Encoding',
 ])
 
-with tab1:  # Missing Values Tab
+with tab1:
     st.subheader("Handling Missing Values", divider=True)
     missing_df = pd.DataFrame({
         'Column': df.columns,
@@ -64,7 +70,6 @@ with tab1:  # Missing Values Tab
             ["Mean", "Median", "Mode", "Forward Fill", "Backward Fill", "Custom Value", "Remove Rows", "Simple impute", "KNN impute", "Remove Columns"],
             horizontal=True
         )
-
         custom_value = None
         if method == "Custom Value":
             custom_value = st.text_input("Enter value to fill missing data:")
@@ -73,10 +78,12 @@ with tab1:  # Missing Values Tab
         apply_missing = st.button("Apply", key="apply_missing")
         df_preview = None
 
-        if preview_missing or apply_missing:
+        if (preview_missing or apply_missing) and cols_to_process:
             df_clean = df.copy()
             try:
                 for col in cols_to_process:
+                    if col not in df_clean.columns:
+                        continue
                     if method == "Mean" and pd.api.types.is_numeric_dtype(df_clean[col]):
                         df_clean[col] = df_clean[col].fillna(df_clean[col].mean())
                     elif method == "Median" and pd.api.types.is_numeric_dtype(df_clean[col]):
@@ -98,13 +105,17 @@ with tab1:  # Missing Values Tab
                 if method == "Remove Rows":
                     df_clean = df_clean.dropna(subset=cols_to_process)
                 elif method == "Remove Columns":
-                    df_clean = df_clean.drop(columns=cols_to_process)
+                    df_clean = df_clean.drop(columns=cols_to_process, errors='ignore')
                 elif method == "Simple impute":
                     imputer = SimpleImputer(strategy='mean')
-                    df_clean[cols_to_process] = imputer.fit_transform(df_clean[cols_to_process])
+                    exist_cols = [col for col in cols_to_process if col in df_clean.columns]
+                    if exist_cols:
+                        df_clean[exist_cols] = imputer.fit_transform(df_clean[exist_cols])
                 elif method == "KNN impute":
                     imputer = KNNImputer(n_neighbors=5)
-                    df_clean[cols_to_process] = imputer.fit_transform(df_clean[cols_to_process])
+                    exist_cols = [col for col in cols_to_process if col in df_clean.columns]
+                    if exist_cols:
+                        df_clean[exist_cols] = imputer.fit_transform(df_clean[exist_cols])
 
                 df_preview = df_clean
 
@@ -120,72 +131,75 @@ with tab1:  # Missing Values Tab
     else:
         st.success("No missing values found in the dataset!")
 
-with tab2:  # Outliers Tab
+with tab2:
     st.subheader("Outlier Detection and Treatment", divider=True)
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    if not numeric_cols:
-        st.warning("No numeric columns found for outlier detection.")
-    else:
-        outlier_cols = st.multiselect(
-            "Select columns for outlier analysis:",
-            options=numeric_cols,
-            default=numeric_cols[:min(3, len(numeric_cols))]
-        )
-        treatment = st.radio(
-            "Choose how to handle outliers:",
-            ["None", "Remove", "Cap", "Replace with NA"],
-            horizontal=True
-        )
+    outlier_cols = st.multiselect(
+        "Select columns for outlier analysis:",
+        options=numeric_cols,
+        default=None
+    )
+    treatment = st.radio(
+        "Choose how to handle outliers:",
+        ["None", "Remove", "Cap", "Replace with NA"],
+        horizontal=True
+    )
+    preview_outliers = st.button("Preview", key="preview_outliers")
+    apply_outliers = st.button("Apply", key="apply_outliers")
+    df_preview = None
 
-        preview_outliers = st.button("Preview", key="preview_outliers")
-        apply_outliers = st.button("Apply", key="apply_outliers")
-        df_preview = None
+    if (preview_outliers or apply_outliers) and outlier_cols:
+        df_clean = df.copy()
+        try:
+            for col in outlier_cols:
+                if col not in df_clean.columns:
+                    continue
+                if treatment == "Remove":
+                    df_clean = df_clean[~detect_outliers(df_clean[col])]
+                elif treatment == "Cap":
+                    Q1 = df_clean[col].quantile(0.25)
+                    Q3 = df_clean[col].quantile(0.75)
+                    IQR = Q3 - Q1
+                    lower_bound = Q1 - 1.5 * IQR
+                    upper_bound = Q3 + 1.5 * IQR
+                    df_clean[col] = df_clean[col].clip(lower_bound, upper_bound)
+                elif treatment == "Replace with NA":
+                    df_clean[col] = df_clean[col].mask(detect_outliers(df_clean[col]))
 
-        if preview_outliers or apply_outliers:
-            df_clean = df.copy()
-            try:
-                for col in outlier_cols:
-                    if treatment == "Remove":
-                        df_clean = df_clean[~detect_outliers(df_clean[col])]
-                    elif treatment == "Cap":
-                        Q1 = df_clean[col].quantile(0.25)
-                        Q3 = df_clean[col].quantile(0.75)
-                        IQR = Q3 - Q1
-                        lower_bound = Q1 - 1.5 * IQR
-                        upper_bound = Q3 + 1.5 * IQR
-                        df_clean[col] = df_clean[col].clip(lower_bound, upper_bound)
-                    elif treatment == "Replace with NA":
-                        df_clean[col] = df_clean[col].mask(detect_outliers(df_clean[col]))
+            df_preview = df_clean
 
-                df_preview = df_clean
+            if preview_outliers:
+                st.write("Preview of DataFrame after Outlier Treatment:")
+                st.dataframe(df_preview.head())
+            if apply_outliers:
+                st.session_state['data'] = df_preview
+                st.success("Outlier treatment applied!")
+                st.rerun()
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
 
-                if preview_outliers:
-                    st.write("Preview of DataFrame after Outlier Treatment:")
-                    st.dataframe(df_preview.head())
-                if apply_outliers:
-                    st.session_state['data'] = df_preview
-                    st.success("Outlier treatment applied!")
-                    st.rerun()
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
-
+    # Show stats/plots only for existing & selected columns
+    existing_outlier_cols = [col for col in outlier_cols if col in df.columns]
+    if existing_outlier_cols:
         st.write("### Summary Statistics")
-        st.dataframe(df[outlier_cols].describe())
+        st.dataframe(df[existing_outlier_cols].describe())
         st.write("### Potential Outliers")
-        for col in outlier_cols:
+        for col in existing_outlier_cols:
             outliers = detect_outliers(df[col])
             if outliers.any():
                 st.write(f"**{col}**: {outliers.sum()} potential outliers detected")
                 fig = px.violin(df[col], title=f'Box Plot showing Outliers in {col}')
                 st.plotly_chart(fig)
+    else:
+        st.info("No selected columns are present in the DataFrame for outlier analysis.")
 
-with tab3:  # Duplicates Tab
+with tab3:
     st.subheader("Duplicate Data Handling", divider=True)
     dup_count = df.duplicated().sum()
     subset_cols = st.multiselect(
         "Consider only these columns for duplicate detection:",
         options=df.columns.tolist(),
-        default=df.columns.tolist()
+        default=None
     )
     keep_option = st.radio(
         "Which duplicates to keep:",
@@ -197,10 +211,11 @@ with tab3:  # Duplicates Tab
     apply_dup = st.button("Apply", key="apply_dup")
     df_preview = None
 
-    if preview_dup or apply_dup:
+    if (preview_dup or apply_dup) and subset_cols:
         try:
             keep = 'first' if "First" in keep_option else 'last' if "Last" in keep_option else False
-            df_clean = df.drop_duplicates(keep=keep, subset=subset_cols if subset_cols else None)
+            exist_cols = [c for c in subset_cols if c in df.columns]
+            df_clean = df.drop_duplicates(keep=keep, subset=exist_cols if exist_cols else None)
             df_preview = df_clean
             if preview_dup:
                 st.write("Preview of DataFrame after Duplicate Removal:")
@@ -214,14 +229,14 @@ with tab3:  # Duplicates Tab
     else:
         st.info(f"Found {dup_count} duplicate rows." if dup_count > 0 else "No duplicate rows found.")
 
-with tab4:  # Scaling Tab
+with tab4:
     st.subheader("Standardisation & Normalization", divider=True)
     st.caption("Standardisation & Normalization are techniques used to transform the data into a common scale.")
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     select_numeric_cols = st.multiselect(
         "Select numeric columns for scaling",
         options=numeric_cols,
-        default=numeric_cols
+        default=None
     )
     select_scale = st.selectbox(
         "Select scaling method",
@@ -238,12 +253,10 @@ with tab4:  # Scaling Tab
     df_preview = None
 
     if select_numeric_cols:
-        # Extra: Check that all selected columns exist in dataframe
         missing_cols = [col for col in select_numeric_cols if col not in df.columns]
         if missing_cols:
             st.error(f"Selected columns not in DataFrame: {missing_cols}")
             st.stop()
-        # Always keep X as DataFrame, even if single column
         X = df[select_numeric_cols] if len(select_numeric_cols) > 1 else df[[select_numeric_cols[0]]]
         X_train, X_test = train_test_split(X, test_size=0.2, random_state=42)
         if preview_scale or apply_scale:
@@ -265,12 +278,11 @@ with tab4:  # Scaling Tab
                         index=X_test.index
                     )
                 X_scaled = pd.concat([X_train_scaled, X_test_scaled]).sort_index()
-                # Keep any object (non-numeric) columns for reintegration
                 obj_cols = df.select_dtypes(exclude=[np.number]).columns
                 numeric_idx = X_scaled.index
                 obj_data_aligned = df.loc[numeric_idx, obj_cols]
                 final_scaled_df = pd.concat([X_scaled, obj_data_aligned], axis=1)
-                # Reorder to match the original DataFrame
+                # Only reorder to columns that are still present
                 original_cols = [col for col in df.columns if col in final_scaled_df.columns]
                 final_scaled_df = final_scaled_df[original_cols]
                 df_preview = final_scaled_df
@@ -287,7 +299,7 @@ with tab4:  # Scaling Tab
     else:
         st.info("Please select at least one numeric column for scaling.")
 
-with tab5:  # Encoding Tab
+with tab5:
     st.subheader("Encoding Categorical Data", divider=True)
     obj_cols = df.select_dtypes(include='object').columns.tolist()
     select_encode = st.selectbox(
@@ -306,7 +318,8 @@ with tab5:  # Encoding Tab
             df_label = df.copy()
             le = LabelEncoder()
             for col in label_cols:
-                df_label[col] = le.fit_transform(df_label[col].astype(str))
+                if col in df_label.columns:
+                    df_label[col] = le.fit_transform(df_label[col].astype(str))
             df_preview = df_label
             if preview_label:
                 st.write("Preview of Label-encoded DataFrame:")
@@ -323,7 +336,8 @@ with tab5:  # Encoding Tab
             df_ordinal = df.copy()
             oe = OrdinalEncoder()
             for col in ordinal_cols:
-                df_ordinal[col] = oe.fit_transform(df_ordinal[col].values.reshape(-1, 1))
+                if col in df_ordinal.columns:
+                    df_ordinal[col] = oe.fit_transform(df_ordinal[col].values.reshape(-1, 1))
             df_preview = df_ordinal
             if preview_ordinal:
                 st.write("Preview of Ordinal-encoded DataFrame:")
@@ -342,37 +356,48 @@ with tab5:  # Encoding Tab
         apply_bin = st.button("Apply", key="apply_bin")
         if select_numeric and strategy != "None" and (preview_bin or apply_bin):
             df_processed = df.copy()
-            kbin = KBinsDiscretizer(n_bins=n_bins, encode="ordinal", strategy=strategy)
-            transformed = kbin.fit_transform(df_processed[select_numeric])
-            df_processed[select_numeric] = pd.DataFrame(transformed, columns=select_numeric, index=df_processed.index)
-            for i, col in enumerate(select_numeric):
-                edges = kbin.bin_edges_[i]
-                intervals = [
-                    f"[{edges[j]:.2f}–{edges[j + 1]:.2f})"
-                    for j in range(len(edges) - 1)
-                ]
-                df_processed[col + "_range"] = df_processed[col].apply(
-                    lambda x: intervals[int(x)] if not pd.isna(x) else None
-                )
-            df_preview = df_processed
-            if preview_bin:
-                st.write("Preview of Binned DataFrame:")
-                st.dataframe(df_preview.head())
-            if apply_bin:
-                st.session_state['data'] = df_preview
-                st.success("Binned data saved!")
-                st.rerun()
+            try:
+                exist_cols = [col for col in select_numeric if col in df_processed.columns]
+                if exist_cols:
+                    kbin = KBinsDiscretizer(n_bins=n_bins, encode="ordinal", strategy=strategy)
+                    transformed = kbin.fit_transform(df_processed[exist_cols])
+                    df_processed[exist_cols] = pd.DataFrame(transformed, columns=exist_cols, index=df_processed.index)
+                    for i, col in enumerate(exist_cols):
+                        edges = kbin.bin_edges_[i]
+                        intervals = [
+                            f"[{edges[j]:.2f}–{edges[j + 1]:.2f})"
+                            for j in range(len(edges) - 1)
+                        ]
+                        df_processed[col + "_range"] = df_processed[col].apply(
+                            lambda x: intervals[int(x)] if not pd.isna(x) else None
+                        )
+                    df_preview = df_processed
+                    if preview_bin:
+                        st.write("Preview of Binned DataFrame:")
+                        st.dataframe(df_preview.head())
+                    if apply_bin:
+                        st.session_state['data'] = df_preview
+                        st.success("Binned data saved!")
+                        st.rerun()
+                else:
+                    st.warning("No selected numeric columns exist in DataFrame for binning.")
+            except Exception as e:
+                st.error(f"Error: {str(e)}")
     else:  # One-hot encoding
         selected_cols = st.multiselect("Select columns for one-hot encoding", options=obj_cols, default=[])
         preview_onehot = st.button("Preview", key="preview_onehot")
         apply_onehot = st.button("Apply", key="apply_onehot")
         if selected_cols and (preview_onehot or apply_onehot):
-            df_encoded = pd.get_dummies(df, columns=selected_cols)
-            df_preview = df_encoded
-            if preview_onehot:
-                st.write("Preview of One-hot Encoded DataFrame:")
-                st.dataframe(df_preview.head())
-            if apply_onehot:
-                st.session_state['data'] = df_preview
-                st.success("One-hot encoded data saved!")
-                st.rerun()
+            exist_cols = [col for col in selected_cols if col in df.columns]
+            if exist_cols:
+                df_encoded = pd.get_dummies(df, columns=exist_cols)
+                df_preview = df_encoded
+                if preview_onehot:
+                    st.write("Preview of One-hot Encoded DataFrame:")
+                    st.dataframe(df_preview.head())
+                if apply_onehot:
+                    st.session_state['data'] = df_preview
+                    st.success("One-hot encoded data saved!")
+                    st.rerun()
+            else:
+                st.warning("No selected object columns found for one-hot encoding.")
