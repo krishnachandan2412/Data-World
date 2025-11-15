@@ -5,7 +5,7 @@ import plotly.express as px
 # Page configuration
 st.set_page_config(page_title="Data Inspection", page_icon="🧾", layout="centered",initial_sidebar_state="expanded")
 
-st.header("🔍:blue[Data Observation]",divider=True)
+st.header("🔍:blue[Data Inspection]",divider=True)
 st.subheader("Here you can observe the dataset",divider=True)
 if 'data' in st.session_state and st.session_state['data'] is not None and not st.session_state['data'].empty:
     df = st.session_state['data']
@@ -184,3 +184,4 @@ if 'data' in st.session_state and st.session_state['data'] is not None and not s
 
 else:
     st.info("No DataFrame found in session. Please upload a file and set it as session data from the upload page.")
+
